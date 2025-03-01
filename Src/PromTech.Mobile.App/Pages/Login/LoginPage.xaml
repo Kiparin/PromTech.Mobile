@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:mct="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             xmlns:lang="clr-namespace:PromTech.Mobile.App.Resources.Localization"
+             x:Class="PromTech.Mobile.App.Pages.Login.LoginPage"
+             Background="#fdfbfb"
+             Title="LoginPage">
+
+    <ContentPage.Behaviors>
+        <mct:StatusBarBehavior StatusBarColor="White" StatusBarStyle="DarkContent" />
+    </ContentPage.Behaviors>
+
+    <Grid>
+        <Grid
+            IsVisible="{Binding IsLoadingEnabled}"
+            ZIndex="1"
+            BackgroundColor="#50000000">
+            <VerticalStackLayout
+                VerticalOptions="Center"
+                HorizontalOptions="Center">
+                <ActivityIndicator
+                    IsRunning="True"
+                    WidthRequest="50" />
+                <Label
+                    Text="{x:Static lang:TextLocalize.ConnectIndicatorLabel}"
+                    FontSize="16" />
+            </VerticalStackLayout>
+        </Grid>
+        <VerticalStackLayout
+            IsEnabled="{Binding IsAuthEnabled}"
+            VerticalOptions="Center"
+            HorizontalOptions="Center">
+            <Image
+                VerticalOptions="Start"
+                HorizontalOptions="Center"
+                WidthRequest="200"
+                Margin="20"
+                Source="logo.png" />
+            <Frame
+               BackgroundColor="White"
+               CornerRadius="10"
+               HasShadow="True"
+               BorderColor="White"
+               WidthRequest="300"
+               Margin="10">
+                <StackLayout>
+                    <Frame
+                        Padding="5,0,5,0"
+                        BackgroundColor="#f9f9f9"
+                        Margin="5">
+                        <Entry
+                            Text="{Binding IpAddress}"
+                            Placeholder="{x:Static lang:TextLocalize.IPLabel}"
+                            FontSize="16" />
+                    </Frame>
+                    <Frame
+                        Padding="5,0,5,0"
+                        BackgroundColor="#f9f9f9"
+                        Margin="5">
+                        <Entry
+                            Text="{Binding Port}"
+                            Placeholder="{x:Static lang:TextLocalize.PortLabel}"
+                            FontSize="16"
+                            Keyboard="Numeric" />
+                    </Frame>
+                </StackLayout>
+            </Frame>
+            <Button
+                Text="{x:Static lang:TextLocalize.ConnectLabel}"
+                Command="{Binding ConnectCommand}"
+                WidthRequest="300" />
+        </VerticalStackLayout>
+    </Grid>
+</ContentPage>

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:lang="clr-namespace:PromTech.Mobile.App.Resources.Localization"
+             xmlns:mct="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             x:Class="PromTech.Mobile.App.Pages.Messanger.MessangerPage"
+             Background="#fdfbfb"
+             Title="TCP клиент">
+
+    <Grid>
+        <Editor
+            BackgroundColor="#10000000"
+            IsReadOnly="True"
+            Margin="0,0,0,60"
+            IsSpellCheckEnabled="False"
+            Text="{Binding MessageText}" />
+        <StackLayout
+            VerticalOptions="End"
+            HeightRequest="60">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="7*" />
+                    <ColumnDefinition Width="3*" />
+                </Grid.ColumnDefinitions>
+                <Frame
+                    Grid.Column="0"
+                    Padding="5,0,5,0"
+                    BackgroundColor="#f9f9f9"
+                    Margin="5">
+                    <Entry
+                        Text="{Binding SendText}"
+                        Placeholder="{x:Static lang:TextLocalize.MessageLabel}"
+                        FontSize="16" />
+                </Frame>
+                <Button
+                    Text="{x:Static lang:TextLocalize.SendLabel}"
+                    Command="{Binding SendCommand}"
+                    Grid.Column="1"
+                    Margin="5" />
+            </Grid>
+        </StackLayout>
+    </Grid>
+</ContentPage>
