@@ -1,13 +1,14 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
+using PromTech.Mobile.App.Services;
 using PromTech.Mobile.Core.Interfaces;
 using PromTech.Mobile.TCP.Interfaces;
 using PromTech.Mobile.TCP.Model;
 
-namespace PromTech.Mobile.App.Pages.Messanger
+namespace PromTech.Mobile.App.Pages.Messenger
 {
-    public partial class MessangerPageViewModel : ObservableObject, IDisposable
+    public partial class MessengerPageViewModel : ObservableObject, IDisposable
     {
         public IAsyncRelayCommand SendCommand { get; private set; }
 
@@ -20,7 +21,7 @@ namespace PromTech.Mobile.App.Pages.Messanger
         private readonly ITcpClient _tcpService;
         private readonly ILocalStorage _localStorage;
 
-        public MessangerPageViewModel(ITcpClient tcpClientService, ILocalStorage localStorage)
+        public MessengerPageViewModel(ITcpClient tcpClientService, ILocalStorage localStorage)
         {
             _tcpService = tcpClientService;
             _localStorage = localStorage;
@@ -36,8 +37,15 @@ namespace PromTech.Mobile.App.Pages.Messanger
 
         private async void InitializeAsync()
         {
-            var connection = await _localStorage.LoadAsync();
-            await _tcpService.StartAsync(connection.IPAddress, Convert.ToInt32(connection.Port));
+            try
+            {
+                var connection = await _localStorage.LoadAsync();
+                await _tcpService.StartAsync(connection.IPAddress, Convert.ToInt32(connection.Port));
+            }
+            catch 
+            {
+                await AlertService.Show("Ошибка при настроек подключения");
+            }
         }
 
         /// <summary>

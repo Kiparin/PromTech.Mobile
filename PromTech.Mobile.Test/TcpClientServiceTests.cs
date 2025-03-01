@@ -71,7 +71,7 @@ namespace PromTech.Mobile.Test.TcpTests
 
             MakeMessageContainer("Подключение к серверу возможно.", MessageType.Message);
 
-            MakeConnectMokcServer("CP866");
+            await MakeConnectMokcServer("CP866");
             await Task.Delay(5000);
 
             var result = await _tcpClientService.CheckConnectionAsync(serverAddress, port);
@@ -83,7 +83,73 @@ namespace PromTech.Mobile.Test.TcpTests
         }
 
         [Fact]
-        public async Task StartAsync_WhenServerNotConnected()
+        public async Task SendMessageAsync_ShouldNotSend_WhenNotConnectedCP866()
+        {
+            var message = "Привет сервер!";
+            MakeMessageContainer("Соединение с сервером не установлено.", MessageType.Error);
+
+            await MakeConnectMokcServer("CP866");
+
+            MessageContainer result = null;
+            _tcpClientService.OnMessageReceived += (msg) => result = msg;
+
+            await _tcpClientService.SendMessageAsync(message);
+
+            Assert.NotNull(_messageContainer);
+            Assert.Equal(_messageContainer.MessageType, result.MessageType);
+            Assert.Equal(_messageContainer.Message, result.Message);
+            StopTcp();
+            await Task.Delay(5000);
+        }
+
+        [Fact]
+        public async Task SendMessageAsync_ShouldSend_TrueReceivedCP866()
+        {
+            var message = "Привет сервер!";
+            MakeMessageContainer("Правильно", MessageType.Message);
+
+            await MakeConnectMokcServer("CP866");
+            StartTcpClient();
+            await Task.Delay(5000);
+
+            MessageContainer result = null;
+            _tcpClientService.OnMessageReceived += (msg) => result = msg;
+
+            await _tcpClientService.SendMessageAsync(message);
+            await Task.Delay(8000);
+
+            Assert.NotNull(_messageContainer);
+            Assert.Equal(_messageContainer.MessageType, result.MessageType);
+            Assert.Equal(_messageContainer.Message, result.Message);
+            StopTcp();
+            await Task.Delay(5000);
+        }
+
+        [Fact]
+        public async Task SendMessageAsync_ShouldSend_CheckCP866Encoder()
+        {
+            var message = "Привет сервер!";
+            MakeMessageContainer("?????? ??????!", MessageType.Message);
+
+            await MakeConnectMokcServer("ASCII");
+            StartTcpClient();
+            await Task.Delay(5000);
+
+            MessageContainer result = null;
+            _tcpClientService.OnMessageReceived += (msg) => result = msg;
+
+            await _tcpClientService.SendMessageAsync(message);
+            await Task.Delay(10000);
+
+            Assert.NotNull(_messageContainer);
+            Assert.Equal(_messageContainer.MessageType, result.MessageType);
+            Assert.Equal(_messageContainer.Message, result.Message);
+            StopTcp();
+            await Task.Delay(5000);
+        }
+
+        [Fact]
+        public async Task StartAsync_ShouldReturnErrorMessage_WhenServerNotConnected()
         {
             MakeMessageContainer(
                 "Ошибка подключения: При попытке подключения к серверу возникла ошибка. Следующая попытка будет через 5 секунд",
@@ -102,84 +168,24 @@ namespace PromTech.Mobile.Test.TcpTests
             Assert.NotNull(_messageContainer);
             Assert.Equal(_messageContainer.MessageType, result.MessageType);
             Assert.Equal(_messageContainer.Message, result.Message);
+            StopTcp();
+            await Task.Delay(5000);
         }
 
         [Fact]
-        public async Task StartAsync_WhenServerConnected()
+        public async Task StartAsync_ShouldReturnConnected_WhenServerConnected()
         {
 
             bool? connectionStatus = null;
             _tcpClientService.OnConnectionStatusChanged += (status) => connectionStatus = status;
-            MakeConnectMokcServer("CP866");
+            await MakeConnectMokcServer("CP866");
 
             StartTcpClient();
             await Task.Delay(5000);
 
             Assert.True(connectionStatus);
-            StopMokcServer();
-        }
-
-        [Fact]
-        public async Task SendMessageAsync_ShouldNotSend_WhenNotConnectedCP866()
-        {
-            var message = "Привет сервер!";
-            MakeMessageContainer("Соединение с сервером не установлено.", MessageType.Error);
-
-            MakeConnectMokcServer("CP866");
-
-            MessageContainer result = null;
-            _tcpClientService.OnMessageReceived += (msg) => result = msg;
-
-            await _tcpClientService.SendMessageAsync(message);
-
-            Assert.NotNull(_messageContainer);
-            Assert.Equal(_messageContainer.MessageType, result.MessageType);
-            Assert.Equal(_messageContainer.Message, result.Message);
-            StopMokcServer();
-        }
-
-        [Fact]
-        public async Task SendMessageAsync_ShouldSend_TrueReceivedCP866()
-        {
-            var message = "Привет сервер!";
-            MakeMessageContainer("Правильно", MessageType.Message);
-
-            MakeConnectMokcServer("CP866");
-            StartTcpClient();
+            StopTcp();
             await Task.Delay(5000);
-
-            MessageContainer result = null;
-            _tcpClientService.OnMessageReceived += (msg) => result = msg;
-
-            await _tcpClientService.SendMessageAsync(message);
-            await Task.Delay(8000);
-
-            Assert.NotNull(_messageContainer);
-            Assert.Equal(_messageContainer.MessageType, result.MessageType);
-            Assert.Equal(_messageContainer.Message, result.Message);
-            StopMokcServer();
-        }
-
-        [Fact]
-        public async Task SendMessageAsync_ShouldSend_CheckCP866Encoder()
-        {
-            var message = "Привет сервер!";
-            MakeMessageContainer("?????? ??????!", MessageType.Message);
-
-            MakeConnectMokcServer("ASCII");
-            StartTcpClient();
-            await Task.Delay(5000);
-
-            MessageContainer result = null;
-            _tcpClientService.OnMessageReceived += (msg) => result = msg;
-
-            await _tcpClientService.SendMessageAsync(message);
-            await Task.Delay(10000);
-
-            Assert.NotNull(_messageContainer);
-            Assert.Equal(_messageContainer.MessageType, result.MessageType);
-            Assert.Equal(_messageContainer.Message, result.Message);
-            StopMokcServer();
         }
 
         [Fact]
@@ -193,17 +199,19 @@ namespace PromTech.Mobile.Test.TcpTests
             Assert.False(connectionStatus);
         }
 
-        private async void MakeConnectMokcServer(string typeEncoding)
+        private Task MakeConnectMokcServer(string typeEncoding)
         {
             _mocTcpServer = new MockTcpServer(IPAddress.Parse("127.0.0.1"), 3000, typeEncoding);
             _token = new CancellationTokenSource();
 
-            var task = _mocTcpServer.StartAsync(_token.Token);
+            _mocTcpServer.StartAsync(_token.Token);
+
+            return Task.CompletedTask;
         }
 
         private async void StopMokcServer()
         {
-            _token.Cancel();
+            _token?.Cancel();
             await Task.Delay(5000);
             _mocTcpServer?.Dispose();
         }
@@ -222,6 +230,12 @@ namespace PromTech.Mobile.Test.TcpTests
             var serverAddress = "127.0.0.1";
             var port = 3000;
             await _tcpClientService.StartAsync(serverAddress, port);
+        }
+
+        private void StopTcp()
+        {
+            StopMokcServer();
+            _tcpClientService.Stop();
         }
     }
 }

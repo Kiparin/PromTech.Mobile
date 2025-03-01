@@ -3,7 +3,7 @@
 using Microsoft.Extensions.Logging;
 
 using PromTech.Mobile.App.Pages.Login;
-using PromTech.Mobile.App.Pages.Messanger;
+using PromTech.Mobile.App.Pages.Messenger;
 using PromTech.Mobile.Core.Interfaces;
 using PromTech.Mobile.Core.Services.LocalStorage;
 using PromTech.Mobile.TCP.Interfaces;
@@ -47,7 +47,7 @@ public static class MauiProgram
     private static MauiAppBuilder RegisterViewModels(this MauiAppBuilder mauiAppBuilder)
     {
         mauiAppBuilder.Services.AddTransient<LoginPageViewModel>();
-        mauiAppBuilder.Services.AddTransient<MessangerPageViewModel>();
+        mauiAppBuilder.Services.AddTransient<MessengerPageViewModel>();
 
         return mauiAppBuilder;
     }
@@ -55,7 +55,7 @@ public static class MauiProgram
     private static MauiAppBuilder RegisterViews(this MauiAppBuilder mauiAppBuilder)
     {
         mauiAppBuilder.Services.AddTransient<LoginPage>();
-        mauiAppBuilder.Services.AddTransient<MessangerPage>();
+        mauiAppBuilder.Services.AddTransient<MessengerPage>();
 
         return mauiAppBuilder;
     }

@@ -1,9 +1,9 @@
-<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:lang="clr-namespace:PromTech.Mobile.App.Resources.Localization"
              xmlns:mct="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
-             x:Class="PromTech.Mobile.App.Pages.Messanger.MessangerPage"
+             x:Class="PromTech.Mobile.App.Pages.Messenger.MessengerPage"
              Background="#fdfbfb"
              Title="TCP клиент">
 

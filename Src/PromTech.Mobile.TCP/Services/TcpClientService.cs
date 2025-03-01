@@ -6,6 +6,16 @@ using PromTech.Mobile.TCP.Model;
 
 namespace PromTech.Mobile.TCP.Services
 {
+    /// <summary>
+    /// Сервис для работы с TCP клиентом.
+    /// Логика подключения, отправки и приема сообщений.
+    /// </summary>
+    /// <remarks>
+    /// Содержит события для обработки сообщений и статуса соединения:
+    ///  OnMessageReceived - Событие, возвращающее сообщение от сервера, а также передающее ошибки в ходе работы TCP соединения.
+    ///  OnConnectionStatusChanged - Событие, возвращающее статус соединения с сервером.
+    /// </remarks>
+
     public class TcpClientService : ITcpClient
     {
         public event Action<MessageContainer> OnMessageReceived;
@@ -41,23 +51,32 @@ namespace PromTech.Mobile.TCP.Services
                     using (var testClient = new TcpClient())
                     {
                         await testClient.ConnectAsync(serverAddress, port, cts.Token);
-
-                        message.MessageType = MessageType.Message;
-                        message.Message = "Подключение к серверу возможно.";
-                        return message;
+                        return MakeMessageContainer("Подключение к серверу возможно.", MessageType.Message);
                     }
                 }
                 catch (OperationCanceledException)
                 {
-                    message.MessageType = MessageType.Error;
-                    message.Message = "Не удалось подключиться к серверу: таймаут. Проверьте оборудование и попробуйте снова.";
-                    return message;
+                    return MakeMessageContainer(
+                        "Не удалось подключиться к серверу: Tаймаут. Проверьте оборудование и попробуйте снова.",
+                        MessageType.Error);
+                }
+                catch (SocketException)
+                {
+                    return MakeMessageContainer(
+                        "Ошибка при проверке подключения: Этот хост неизвестен.",
+                        MessageType.Error);
+                }
+                catch (ArgumentException)
+                {
+                    return MakeMessageContainer(
+                        "Ошибка при проверке подключения: Невалидный адрес или порт.",
+                        MessageType.Error);
                 }
                 catch (Exception ex)
                 {
-                    message.MessageType = MessageType.Error;
-                    message.Message = $"Ошибка при проверке подключения: {ex.Message}";
-                    return message;
+                    return MakeMessageContainer(
+                       $"Ошибка при проверке подключения: {ex.Message}",
+                       MessageType.Error);
                 }
             }
         }
@@ -75,8 +94,6 @@ namespace PromTech.Mobile.TCP.Services
 
             try
             {
-                await ConnectToServerAsync();
-                ListenForServerResponsesAsync(_cancellationTokenSource.Token);
                 MonitorConnectionAsync(_cancellationTokenSource.Token);
             }
             catch (Exception ex)
@@ -133,11 +150,19 @@ namespace PromTech.Mobile.TCP.Services
                     _stream = null;
                     _client?.Close();
                     _client = null;
-                    throw new Exception("Отчистка данных и попытка переподключения через 5 секунд");
+                    throw new Exception("Ошибка подключения");
+                }
+                catch (SocketException)
+                {
+                    throw new Exception("При попытке подключения к серверу возникла ошибка");
+                }
+                catch (IOException)
+                {
+                    throw new Exception("Ошибка ввода/вывода");
                 }
                 catch (Exception ex)
                 {
-                    throw new Exception("Ошибка чтения данных. Следующая попытка будет через 5 секунд");
+                    throw new Exception($"Ошибка чтения данных : {ex.Message}");
                 }
             }
         }
@@ -154,17 +179,20 @@ namespace PromTech.Mobile.TCP.Services
                 {
                     if (!_isConnected)
                     {
-                        Console.WriteLine("Переподключение");
                         await ConnectToServerAsync();
                         ListenForServerResponsesAsync(_cancellationTokenSource.Token);
                     }
+
+                    await Task.Delay(5000, cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    await Error("Мониторинг подключения остановлен.");
                 }
                 catch (Exception e)
                 {
-                    await Error($"Ошибка переподключения: {e.Message}");
+                    await Error($"Ошибка подключения: {e.Message}. Следующая попытка будет через 5 секунд");
                 }
-
-                await Task.Delay(5000, cancellationToken);
             }
         }
 
@@ -191,6 +219,10 @@ namespace PromTech.Mobile.TCP.Services
             catch (OperationCanceledException)
             {
                 await Error("Прослушка ответов от сервера остановлена.");
+            }
+            catch (IOException)
+            {
+                await Error("Ошибка при прослушке ответов от сервера: Сервер или сеть недоступна.");
             }
             catch (Exception ex)
             {
@@ -230,13 +262,24 @@ namespace PromTech.Mobile.TCP.Services
         /// <returns></returns>
         private Task MessageReсiver(string message, MessageType type)
         {
-            var container = new MessageContainer();
-
-            container.Message = message;
-            container.MessageType = type;
-            OnMessageReceived?.Invoke(container);
+            OnMessageReceived?.Invoke(MakeMessageContainer(message, type));
 
             return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Создание контейнера сообщений.
+        /// </summary>
+        /// <param name="message"></param>
+        /// <param name="type"></param>
+        /// <returns></returns>
+        private MessageContainer MakeMessageContainer(string message, MessageType type)
+        {
+            return new MessageContainer
+            {
+                MessageType = type,
+                Message = message
+            };
         }
 
         public void Stop()

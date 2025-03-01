@@ -3,7 +3,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-using PromTech.Mobile.App.Pages.Messanger;
+using PromTech.Mobile.App.Pages.Messenger;
 using PromTech.Mobile.App.Resources.Localization;
 using PromTech.Mobile.App.Services;
 using PromTech.Mobile.Core.Interfaces;
@@ -74,6 +74,7 @@ namespace PromTech.Mobile.App.Pages.Login
                     return;
                 }
 
+                //проверяем возможность подключения
                 var result = await _tcpClient.CheckConnectionAsync(IpAddress, port);
                 if (result.MessageType == MessageType.Error)
                 {
@@ -98,7 +99,7 @@ namespace PromTech.Mobile.App.Pages.Login
 
         private void NavigateTo()
         {
-            var messagerPage = IPlatformApplication.Current.Services.GetService<MessangerPage>();
+            var messagerPage = IPlatformApplication.Current.Services.GetService<MessengerPage>();
             Application.Current.MainPage = new NavigationPage(messagerPage);
         }
 
@@ -118,6 +119,7 @@ namespace PromTech.Mobile.App.Pages.Login
             return Task.CompletedTask;
         }
 
+        //Валидация введенных данных
         private bool ValidateInput()
         {
             ValidateAllProperties();
