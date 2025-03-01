@@ -1,41 +1,48 @@
-﻿using System.Net.Sockets;
-using System.Net;
+﻿using System.Net;
+using System.Net.Sockets;
 using System.Text;
 
 namespace PromTech.Mobile.Test.Mock
 {
-    class MockTcpServer
+    internal class MockTcpServer : IDisposable
     {
         private IPAddress _ipAddress;
         private int _port;
         private Encoding _encoder;
+        private TcpListener _listener;
+        private TcpClient _client;
+        private CancellationToken _cancellationToken;
 
-        public MockTcpServer(IPAddress ipAddress, int port)
+        public MockTcpServer(IPAddress ipAddress, int port, string typeEncoding)
         {
             _ipAddress = ipAddress;
             _port = port;
 
-            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-            _encoder = Encoding.GetEncoding("CP866");
+            if (typeEncoding == "CP866")
+            {
+                Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+            }
+            _encoder = Encoding.GetEncoding(typeEncoding);
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            TcpListener listener = new TcpListener(_ipAddress, _port);
-            listener.Start();
+            _listener = new TcpListener(_ipAddress, _port);
+            _listener.Start();
+            _cancellationToken = cancellationToken;
 
             try
             {
                 while (!cancellationToken.IsCancellationRequested)
                 {
-                    if (listener.Pending())
+                    if (_listener.Pending())
                     {
-                        TcpClient client = await listener.AcceptTcpClientAsync();
-                        HandleClientAsync(client); 
+                        _client = await _listener.AcceptTcpClientAsync();
+                        HandleClientAsync(_client);
                     }
                     else
                     {
-                        await Task.Delay(100, cancellationToken); 
+                        await Task.Delay(100, cancellationToken);
                     }
                 }
             }
@@ -45,7 +52,7 @@ namespace PromTech.Mobile.Test.Mock
             }
             finally
             {
-                listener.Stop();
+                _listener.Stop();
             }
         }
 
@@ -57,22 +64,34 @@ namespace PromTech.Mobile.Test.Mock
                 byte[] buffer = new byte[1024];
                 int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
                 string request = _encoder.GetString(buffer, 0, bytesRead);
-                if(request == "Hello, server!")
+                if (request == "Привет сервер!")
                 {
-                    string response = "Правильно";
-                    byte[] responseBytes = _encoder.GetBytes(response);
-                    await stream.WriteAsync(responseBytes, 0, responseBytes.Length);
-                    Console.WriteLine("Ответ отправлен.");
+                    SendAync(client, "Правильно");
                 }
                 else
                 {
-                    string response = "Неправильно";
-                    byte[] responseBytes = _encoder.GetBytes(response);
-                    await stream.WriteAsync(responseBytes, 0, responseBytes.Length);
-                    Console.WriteLine("Ответ отправлен.");
+                    SendAync(client, request);
                 }
-               
             }
+        }
+
+        private async void SendAync(TcpClient client, string message)
+        {
+            using (client)
+            using (NetworkStream stream = client.GetStream())
+            {
+                byte[] buffer = _encoder.GetBytes(message);
+                await stream.WriteAsync(buffer, 0, buffer.Length);
+            }
+        }
+
+        public void Dispose()
+        {
+            _listener?.Stop();
+            _listener = null;
+            _client = null;
+            _encoder = null;
+            GC.SuppressFinalize(this);
         }
     }
 }

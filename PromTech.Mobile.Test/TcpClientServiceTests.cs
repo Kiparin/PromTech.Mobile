@@ -1,130 +1,162 @@
-using System.Net;
+ï»¿using System.Net;
 
 using PromTech.Mobile.TCP.Model;
 using PromTech.Mobile.TCP.Services;
 using PromTech.Mobile.Test.Mock;
 
-public class TcpClientServiceTests
+namespace PromTech.Mobile.Test
 {
-    private readonly TcpClientService _tcpClientService;
-
-    public TcpClientServiceTests()
+    public class TcpClientServiceTests
     {
-        _tcpClientService = new TcpClientService();
-    }
+        private readonly TcpClientService _tcpClientService;
+        private MockTcpServer _mocTcpServer;
+        private CancellationTokenSource _token;
 
-    [Fact]
-    public async Task CheckConnectionAsync_ShouldReturnErrorMessage_WhenConnectionIsFails()
-    {
-        var serverAddress = "127.0.0.1";
-        var port = 8080;
-        var expectedMessage = new MessageContainer
+        public TcpClientServiceTests()
         {
-            MessageType = MessageType.Error,
-            Message = "Íå óäàëîñü ïîäêëþ÷èòüñÿ ê ñåðâåðó: òàéìàóò. Ïðîâåðüòå îáîðóäîâàíèå è ïîïðîáóéòå ñíîâà."
-        };
+            _tcpClientService = new TcpClientService();
+        }
 
-        var result = await _tcpClientService.CheckConnectionAsync(serverAddress, port);
-
-        Assert.Equal(expectedMessage.MessageType, result.MessageType);
-        Assert.Equal(expectedMessage.Message, result.Message);
-    }
-
-    [Fact]
-    public async Task CheckConnectionAsync_ShouldReturnErrorMessage_WhenConnectionFails()
-    {
-        var serverAddress = "invalid.address";
-        var port = 8080;
-        var expectedMessage = new MessageContainer
+        [Fact]
+        public async Task CheckConnectionAsync_ShouldReturnErrorMessage_WhenConnectionIsFails()
         {
-            MessageType = MessageType.Error,
-            Message = "Îøèáêà ïðè ïðîâåðêå ïîäêëþ÷åíèÿ: Ýòîò õîñò íåèçâåñòåí."
-        };
+            var serverAddress = "127.0.0.1";
+            var port = 8080;
+            var expectedMessage = new MessageContainer
+            {
+                MessageType = MessageType.Error,
+                Message = "ÐÐµ ÑƒÐ´Ð°Ð»Ð¾ÑÑŒ Ð¿Ð¾Ð´ÐºÐ»ÑŽÑ‡Ð¸Ñ‚ÑŒÑÑ Ðº ÑÐµÑ€Ð²ÐµÑ€Ñƒ: Ñ‚Ð°Ð¹Ð¼Ð°ÑƒÑ‚. ÐŸÑ€Ð¾Ð²ÐµÑ€ÑŒÑ‚Ðµ Ð¾Ð±Ð¾Ñ€ÑƒÐ´Ð¾Ð²Ð°Ð½Ð¸Ðµ Ð¸ Ð¿Ð¾Ð¿Ñ€Ð¾Ð±ÑƒÐ¹Ñ‚Ðµ ÑÐ½Ð¾Ð²Ð°."
+            };
 
-        var result = await _tcpClientService.CheckConnectionAsync(serverAddress, port);
+            var result = await _tcpClientService.CheckConnectionAsync(serverAddress, port);
 
-        Assert.Equal(expectedMessage.MessageType, result.MessageType);
-        Assert.Equal(expectedMessage.Message, result.Message);
-    }
+            Assert.Equal(expectedMessage.MessageType, result.MessageType);
+            Assert.Equal(expectedMessage.Message, result.Message);
+        }
 
-    [Fact]
-    public async Task CheckConnectionAsync_ShouldReturnErrorMessage_WhenConnectionTrue()
-    {
-        
-        var expectedMessage = new MessageContainer
+        [Fact]
+        public async Task CheckConnectionAsync_ShouldReturnErrorMessage_WhenConnectionFails()
         {
-            MessageType = MessageType.Message,
-            Message = "Ïîäêëþ÷åíèå ê ñåðâåðó âîçìîæíî."
-        };
-        var serverAddress = "127.0.0.1";
-        var port = 3000;
+            var serverAddress = "invalid.address";
+            var port = 8080;
+            var expectedMessage = new MessageContainer
+            {
+                MessageType = MessageType.Error,
+                Message = "ÐžÑˆÐ¸Ð±ÐºÐ° Ð¿Ñ€Ð¸ Ð¿Ñ€Ð¾Ð²ÐµÑ€ÐºÐµ Ð¿Ð¾Ð´ÐºÐ»ÑŽÑ‡ÐµÐ½Ð¸Ñ: Ð­Ñ‚Ð¾Ñ‚ Ñ…Ð¾ÑÑ‚ Ð½ÐµÐ¸Ð·Ð²ÐµÑÑ‚ÐµÐ½."
+            };
 
-        MakeConnectMokcServer();
+            var result = await _tcpClientService.CheckConnectionAsync(serverAddress, port);
 
-        await Task.Delay(5000);
+            Assert.Equal(expectedMessage.MessageType, result.MessageType);
+            Assert.Equal(expectedMessage.Message, result.Message);
+        }
 
-        var result = await _tcpClientService.CheckConnectionAsync(serverAddress, port);
+        [Fact]
+        public async Task CheckConnectionAsync_ShouldReturnErrorMessage_WhenConnectionTrue()
+        {
+            var expectedMessage = new MessageContainer
+            {
+                MessageType = MessageType.Message,
+                Message = "ÐŸÐ¾Ð´ÐºÐ»ÑŽÑ‡ÐµÐ½Ð¸Ðµ Ðº ÑÐµÑ€Ð²ÐµÑ€Ñƒ Ð²Ð¾Ð·Ð¼Ð¾Ð¶Ð½Ð¾."
+            };
+            var serverAddress = "127.0.0.1";
+            var port = 3000;
 
-        Assert.Equal(expectedMessage.MessageType, result.MessageType);
-        Assert.Equal(expectedMessage.Message, result.Message);
-    }
+            MakeConnectMokcServer("CP866");
 
-    [Fact]
-    public async Task SendMessageAsync_ShouldNotSend_WhenNotConnected()
-    {
-        var message = "Hello, server!";
+            await Task.Delay(5000);
 
-        MakeConnectMokcServer();
+            var result = await _tcpClientService.CheckConnectionAsync(serverAddress, port);
 
-        string receivedErrorMessage = null;
-        _tcpClientService.OnMessageReceived += (msg) => receivedErrorMessage = msg.Message;
+            Assert.Equal(expectedMessage.MessageType, result.MessageType);
+            Assert.Equal(expectedMessage.Message, result.Message);
+            StopMokcServer();
+        }
 
-        await _tcpClientService.SendMessageAsync(message);
-        Assert.Contains("Ñîåäèíåíèå ñ ñåðâåðîì íå óñòàíîâëåíî.", receivedErrorMessage);
-    }
+        [Fact]
+        public async Task SendMessageAsync_ShouldNotSend_WhenNotConnectedCP866()
+        {
+            var message = "ÐŸÑ€Ð¸Ð²ÐµÑ‚ ÑÐµÑ€Ð²ÐµÑ€!";
 
-    [Fact]
-    public async Task SendMessageAsync_ShouldSend_TrueReceived()
-    {
-        
-        var message = "Hello, server!";
+            MakeConnectMokcServer("CP866");
 
-        MakeConnectMokcServer();
-        StartTcpClient();
-        await Task.Delay(5000);
+            string receivedErrorMessage = null;
+            _tcpClientService.OnMessageReceived += (msg) => receivedErrorMessage = msg.Message;
 
-        string receivedMessage = null;
-        _tcpClientService.OnMessageReceived += (msg) => receivedMessage = msg.Message;
+            await _tcpClientService.SendMessageAsync(message);
+            Assert.Contains("Ð¡Ð¾ÐµÐ´Ð¸Ð½ÐµÐ½Ð¸Ðµ Ñ ÑÐµÑ€Ð²ÐµÑ€Ð¾Ð¼ Ð½Ðµ ÑƒÑÑ‚Ð°Ð½Ð¾Ð²Ð»ÐµÐ½Ð¾.", receivedErrorMessage);
+            StopMokcServer();
+        }
 
-        await _tcpClientService.SendMessageAsync(message);
-        await Task.Delay(8000);
+        [Fact]
+        public async Task SendMessageAsync_ShouldSend_TrueReceivedCP866()
+        {
+            var message = "ÐŸÑ€Ð¸Ð²ÐµÑ‚ ÑÐµÑ€Ð²ÐµÑ€!";
 
-        Assert.Contains("Ïðàâèëüíî", receivedMessage);
-    }
+            MakeConnectMokcServer("CP866");
+            StartTcpClient();
+            await Task.Delay(5000);
 
-    [Fact]
-    public void Stop_ShouldCloseConnectionAndInvokeStatusChanged()
-    {
-        bool? connectionStatus = null;
-        _tcpClientService.OnConnectionStatusChanged += (status) => connectionStatus = status;
+            string receivedMessage = null;
+            _tcpClientService.OnMessageReceived += (msg) => receivedMessage = msg.Message;
 
-        _tcpClientService.Stop();
+            await _tcpClientService.SendMessageAsync(message);
+            await Task.Delay(8000);
 
-        Assert.False(connectionStatus);
-    }
+            Assert.Contains("ÐŸÑ€Ð°Ð²Ð¸Ð»ÑŒÐ½Ð¾", receivedMessage);
+            StopMokcServer();
+        }
 
-    private async void MakeConnectMokcServer()
-    {
-        var mocTcpServer = new MockTcpServer(IPAddress.Parse("127.0.0.1"), 3000);
-        var tocken = new CancellationToken();
+        [Fact]
+        public async Task SendMessageAsync_ShouldSend_CheckCP866Encoder()
+        {
+            var message = "ÐŸÑ€Ð¸Ð²ÐµÑ‚ ÑÐµÑ€Ð²ÐµÑ€!";
 
-        var task = mocTcpServer.StartAsync(tocken);
-    }
+            MakeConnectMokcServer("ASCII");
+            StartTcpClient();
+            await Task.Delay(5000);
 
-    private async void StartTcpClient()
-    {
-        var serverAddress = "127.0.0.1";
-        var port = 3000;
-        await _tcpClientService.StartAsync(serverAddress, port);
+            string receivedMessage = null;
+            _tcpClientService.OnMessageReceived += (msg) => receivedMessage = msg.Message;
+
+            await _tcpClientService.SendMessageAsync(message);
+            await Task.Delay(10000);
+
+            Assert.Contains("?????? ??????!", receivedMessage);
+            StopMokcServer();
+        }
+
+        [Fact]
+        public void Stop_ShouldCloseConnectionAndInvokeStatusChanged()
+        {
+            bool? connectionStatus = null;
+            _tcpClientService.OnConnectionStatusChanged += (status) => connectionStatus = status;
+
+            _tcpClientService.Stop();
+
+            Assert.False(connectionStatus);
+        }
+
+        private async void MakeConnectMokcServer(string typeEncoding)
+        {
+            _mocTcpServer = new MockTcpServer(IPAddress.Parse("127.0.0.1"), 3000, typeEncoding);
+            _token = new CancellationTokenSource();
+
+            var task = _mocTcpServer.StartAsync(_token.Token);
+        }
+
+        private async void StopMokcServer()
+        {
+            _token.Cancel();
+            await Task.Delay(5000);
+            _mocTcpServer?.Dispose();
+        }
+
+        private async void StartTcpClient()
+        {
+            var serverAddress = "127.0.0.1";
+            var port = 3000;
+            await _tcpClientService.StartAsync(serverAddress, port);
+        }
     }
 }
