@@ -1,16 +1,19 @@
 ﻿using System.Net;
 
+using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities;
+
 using PromTech.Mobile.TCP.Model;
 using PromTech.Mobile.TCP.Services;
 using PromTech.Mobile.Test.Mock;
 
-namespace PromTech.Mobile.Test
+namespace PromTech.Mobile.Test.TcpTests
 {
     public class TcpClientServiceTests
     {
         private readonly TcpClientService _tcpClientService;
         private MockTcpServer _mocTcpServer;
         private CancellationTokenSource _token;
+        private MessageContainer _messageContainer;
 
         public TcpClientServiceTests()
         {
@@ -22,16 +25,27 @@ namespace PromTech.Mobile.Test
         {
             var serverAddress = "127.0.0.1";
             var port = 8080;
-            var expectedMessage = new MessageContainer
-            {
-                MessageType = MessageType.Error,
-                Message = "Не удалось подключиться к серверу: таймаут. Проверьте оборудование и попробуйте снова."
-            };
+            MakeMessageContainer("Не удалось подключиться к серверу: Tаймаут. Проверьте оборудование и попробуйте снова.", MessageType.Error);
 
             var result = await _tcpClientService.CheckConnectionAsync(serverAddress, port);
 
-            Assert.Equal(expectedMessage.MessageType, result.MessageType);
-            Assert.Equal(expectedMessage.Message, result.Message);
+            Assert.NotNull(_messageContainer);
+            Assert.Equal(_messageContainer.MessageType, result.MessageType);
+            Assert.Equal(_messageContainer.Message, result.Message);
+        }
+
+        [Fact]
+        public async Task CheckConnectionAsync_ShouldReturnErrorMessage_WhenEmptyAddress()
+        {
+            var serverAddress = "";
+            var port = 0;
+            MakeMessageContainer("Ошибка при проверке подключения: Невалидный адрес или порт.", MessageType.Error);
+
+            var result = await _tcpClientService.CheckConnectionAsync(serverAddress, port);
+
+            Assert.NotNull(_messageContainer);
+            Assert.Equal(_messageContainer.MessageType, result.MessageType);
+            Assert.Equal(_messageContainer.Message, result.Message);
         }
 
         [Fact]
@@ -39,37 +53,69 @@ namespace PromTech.Mobile.Test
         {
             var serverAddress = "invalid.address";
             var port = 8080;
-            var expectedMessage = new MessageContainer
-            {
-                MessageType = MessageType.Error,
-                Message = "Ошибка при проверке подключения: Этот хост неизвестен."
-            };
+
+            MakeMessageContainer("Ошибка при проверке подключения: Этот хост неизвестен.", MessageType.Error);
 
             var result = await _tcpClientService.CheckConnectionAsync(serverAddress, port);
 
-            Assert.Equal(expectedMessage.MessageType, result.MessageType);
-            Assert.Equal(expectedMessage.Message, result.Message);
+            Assert.NotNull(_messageContainer);
+            Assert.Equal(_messageContainer.MessageType, result.MessageType);
+            Assert.Equal(_messageContainer.Message, result.Message);
         }
 
         [Fact]
         public async Task CheckConnectionAsync_ShouldReturnErrorMessage_WhenConnectionTrue()
         {
-            var expectedMessage = new MessageContainer
-            {
-                MessageType = MessageType.Message,
-                Message = "Подключение к серверу возможно."
-            };
             var serverAddress = "127.0.0.1";
             var port = 3000;
 
-            MakeConnectMokcServer("CP866");
+            MakeMessageContainer("Подключение к серверу возможно.", MessageType.Message);
 
+            MakeConnectMokcServer("CP866");
             await Task.Delay(5000);
 
             var result = await _tcpClientService.CheckConnectionAsync(serverAddress, port);
 
-            Assert.Equal(expectedMessage.MessageType, result.MessageType);
-            Assert.Equal(expectedMessage.Message, result.Message);
+            Assert.NotNull(_messageContainer);
+            Assert.Equal(_messageContainer.MessageType, result.MessageType);
+            Assert.Equal(_messageContainer.Message, result.Message);
+            StopMokcServer();
+        }
+
+        [Fact]
+        public async Task StartAsync_WhenServerNotConnected()
+        {
+            MakeMessageContainer(
+                "Ошибка подключения: При попытке подключения к серверу возникла ошибка. Следующая попытка будет через 5 секунд",
+                MessageType.Error);
+
+            MessageContainer result = null;
+            _tcpClientService.OnMessageReceived += (msg) => result = msg;
+
+            bool? connectionStatus = null;
+            _tcpClientService.OnConnectionStatusChanged += (status) => connectionStatus = status;
+
+            StartTcpClient();
+            await Task.Delay(5000);
+
+            Assert.False(connectionStatus);
+            Assert.NotNull(_messageContainer);
+            Assert.Equal(_messageContainer.MessageType, result.MessageType);
+            Assert.Equal(_messageContainer.Message, result.Message);
+        }
+
+        [Fact]
+        public async Task StartAsync_WhenServerConnected()
+        {
+
+            bool? connectionStatus = null;
+            _tcpClientService.OnConnectionStatusChanged += (status) => connectionStatus = status;
+            MakeConnectMokcServer("CP866");
+
+            StartTcpClient();
+            await Task.Delay(5000);
+
+            Assert.True(connectionStatus);
             StopMokcServer();
         }
 
@@ -77,14 +123,18 @@ namespace PromTech.Mobile.Test
         public async Task SendMessageAsync_ShouldNotSend_WhenNotConnectedCP866()
         {
             var message = "Привет сервер!";
+            MakeMessageContainer("Соединение с сервером не установлено.", MessageType.Error);
 
             MakeConnectMokcServer("CP866");
 
-            string receivedErrorMessage = null;
-            _tcpClientService.OnMessageReceived += (msg) => receivedErrorMessage = msg.Message;
+            MessageContainer result = null;
+            _tcpClientService.OnMessageReceived += (msg) => result = msg;
 
             await _tcpClientService.SendMessageAsync(message);
-            Assert.Contains("Соединение с сервером не установлено.", receivedErrorMessage);
+
+            Assert.NotNull(_messageContainer);
+            Assert.Equal(_messageContainer.MessageType, result.MessageType);
+            Assert.Equal(_messageContainer.Message, result.Message);
             StopMokcServer();
         }
 
@@ -92,18 +142,21 @@ namespace PromTech.Mobile.Test
         public async Task SendMessageAsync_ShouldSend_TrueReceivedCP866()
         {
             var message = "Привет сервер!";
+            MakeMessageContainer("Правильно", MessageType.Message);
 
             MakeConnectMokcServer("CP866");
             StartTcpClient();
             await Task.Delay(5000);
 
-            string receivedMessage = null;
-            _tcpClientService.OnMessageReceived += (msg) => receivedMessage = msg.Message;
+            MessageContainer result = null;
+            _tcpClientService.OnMessageReceived += (msg) => result = msg;
 
             await _tcpClientService.SendMessageAsync(message);
             await Task.Delay(8000);
 
-            Assert.Contains("Правильно", receivedMessage);
+            Assert.NotNull(_messageContainer);
+            Assert.Equal(_messageContainer.MessageType, result.MessageType);
+            Assert.Equal(_messageContainer.Message, result.Message);
             StopMokcServer();
         }
 
@@ -111,18 +164,21 @@ namespace PromTech.Mobile.Test
         public async Task SendMessageAsync_ShouldSend_CheckCP866Encoder()
         {
             var message = "Привет сервер!";
+            MakeMessageContainer("?????? ??????!", MessageType.Message);
 
             MakeConnectMokcServer("ASCII");
             StartTcpClient();
             await Task.Delay(5000);
 
-            string receivedMessage = null;
-            _tcpClientService.OnMessageReceived += (msg) => receivedMessage = msg.Message;
+            MessageContainer result = null;
+            _tcpClientService.OnMessageReceived += (msg) => result = msg;
 
             await _tcpClientService.SendMessageAsync(message);
             await Task.Delay(10000);
 
-            Assert.Contains("?????? ??????!", receivedMessage);
+            Assert.NotNull(_messageContainer);
+            Assert.Equal(_messageContainer.MessageType, result.MessageType);
+            Assert.Equal(_messageContainer.Message, result.Message);
             StopMokcServer();
         }
 
@@ -150,6 +206,15 @@ namespace PromTech.Mobile.Test
             _token.Cancel();
             await Task.Delay(5000);
             _mocTcpServer?.Dispose();
+        }
+
+        private void MakeMessageContainer(string message, MessageType type)
+        {
+            _messageContainer = new MessageContainer
+            {
+                MessageType = type,
+                Message = message
+            };
         }
 
         private async void StartTcpClient()

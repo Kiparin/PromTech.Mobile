@@ -8,10 +8,10 @@ namespace PromTech.Mobile.Test.Mock
     {
         private IPAddress _ipAddress;
         private int _port;
+
         private Encoding _encoder;
         private TcpListener _listener;
         private TcpClient _client;
-        private CancellationToken _cancellationToken;
 
         public MockTcpServer(IPAddress ipAddress, int port, string typeEncoding)
         {
@@ -29,7 +29,6 @@ namespace PromTech.Mobile.Test.Mock
         {
             _listener = new TcpListener(_ipAddress, _port);
             _listener.Start();
-            _cancellationToken = cancellationToken;
 
             try
             {
@@ -58,26 +57,33 @@ namespace PromTech.Mobile.Test.Mock
 
         private async void HandleClientAsync(TcpClient client)
         {
-            using (client)
-            using (NetworkStream stream = client.GetStream())
+            try
             {
-                byte[] buffer = new byte[1024];
-                int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
-                string request = _encoder.GetString(buffer, 0, bytesRead);
-                if (request == "Привет сервер!")
+
+                using (NetworkStream stream = client.GetStream())
                 {
-                    SendAync(client, "Правильно");
-                }
-                else
-                {
-                    SendAync(client, request);
+                    byte[] buffer = new byte[1024];
+                    int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+                    string request = _encoder.GetString(buffer, 0, bytesRead);
+                    if (request == "Привет сервер!")
+                    {
+                        SendAync(client, "Правильно");
+                    }
+                    else
+                    {
+                        SendAync(client, request);
+                    }
                 }
             }
+            catch (Exception)
+            {
+                Console.WriteLine("Соединение прервано.");
+            }
+            
         }
 
         private async void SendAync(TcpClient client, string message)
         {
-            using (client)
             using (NetworkStream stream = client.GetStream())
             {
                 byte[] buffer = _encoder.GetBytes(message);
@@ -88,9 +94,8 @@ namespace PromTech.Mobile.Test.Mock
         public void Dispose()
         {
             _listener?.Stop();
-            _listener = null;
-            _client = null;
-            _encoder = null;
+            _client?.Close();
+
             GC.SuppressFinalize(this);
         }
     }
