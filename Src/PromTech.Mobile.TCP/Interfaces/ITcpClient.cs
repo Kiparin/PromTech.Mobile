@@ -1,5 +1,4 @@
-﻿using PromTech.Mobile.Model;
-using PromTech.Mobile.TCP.Model;
+﻿using PromTech.Mobile.TCP.Model;
 
 namespace PromTech.Mobile.TCP.Interfaces
 {

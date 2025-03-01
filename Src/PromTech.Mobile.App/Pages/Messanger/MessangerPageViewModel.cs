@@ -54,7 +54,7 @@ namespace PromTech.Mobile.App.Pages.Messanger
                     break;
 
                 case MessageType.Error:
-                    // тут по хорошему еще логирование надо
+                    // тут по-хорошему еще логирование надо
                     MessageText += $"{obj.Message} \n";
                     break;
             }
