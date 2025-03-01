@@ -76,12 +76,8 @@ namespace PromTech.Mobile.TCP.Services
             try
             {
                 await ConnectToServerAsync();
-
-                //Запускаем Мониторинг подключения и Слушаем сервер параллельно
-                await Task.WhenAll(
-                    MonitorConnectionAsync(_cancellationTokenSource.Token),
-                    ListenForServerResponsesAsync(_cancellationTokenSource.Token)
-                );
+                ListenForServerResponsesAsync(_cancellationTokenSource.Token);
+                MonitorConnectionAsync(_cancellationTokenSource.Token);
             }
             catch (Exception ex)
             {
@@ -150,7 +146,7 @@ namespace PromTech.Mobile.TCP.Services
         /// Отслеживает состояние соединения и пытается переподключиться при его потере.
         /// </summary>
         /// <param name="cancellationToken">Токен для отмены задачи.</param>
-        private async Task MonitorConnectionAsync(CancellationToken cancellationToken)
+        private async void MonitorConnectionAsync(CancellationToken cancellationToken)
         {
             while (!cancellationToken.IsCancellationRequested)
             {
@@ -160,9 +156,7 @@ namespace PromTech.Mobile.TCP.Services
                     {
                         Console.WriteLine("Переподключение");
                         await ConnectToServerAsync();
-                        await Task.WhenAll(
-                            ListenForServerResponsesAsync(_cancellationTokenSource.Token)
-                        );
+                        ListenForServerResponsesAsync(_cancellationTokenSource.Token);
                     }
                 }
                 catch (Exception e)
@@ -178,7 +172,7 @@ namespace PromTech.Mobile.TCP.Services
         /// Прослушивает ответы от сервера и уведомляет о полученных сообщениях.
         /// </summary>
         /// <param name="cancellationToken">Токен для отмены задачи.</param>
-        private async Task ListenForServerResponsesAsync(CancellationToken cancellationToken)
+        private async void ListenForServerResponsesAsync(CancellationToken cancellationToken)
         {
             var buffer = new byte[1024];
 
