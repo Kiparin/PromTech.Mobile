@@ -57,29 +57,22 @@ namespace PromTech.Mobile.App.Pages.Login
 
         private async Task ConnectAsync()
         {
-            await IsVisibleLoading();
+            await IsVisibleElement(true,false);
 
             if (ValidateInput())
             {
-                await IsHideLoading();
+                await IsVisibleElement(false, true);
                 return;
             }
 
             try
             {
-                if (!int.TryParse(Port.Trim(), out int port))
-                {
-                    await AlertService.Show(TextLocalize.PortConvertError);
-                    await IsHideLoading();
-                    return;
-                }
-
                 //проверяем возможность подключения
-                var result = await _tcpClient.CheckConnectionAsync(IpAddress, port);
+                var result = await _tcpClient.CheckConnectionAsync(IpAddress, Convert.ToInt32(Port));
                 if (result.MessageType == MessageType.Error)
                 {
                     await AlertService.Show(result.Message);
-                    await IsHideLoading();
+                    await IsVisibleElement(false, true);
                 }
                 else
                 {
@@ -87,34 +80,28 @@ namespace PromTech.Mobile.App.Pages.Login
                     connection.Port = Port;
                     await _localStorage.SaveAsync(connection);
                     NavigateTo();
-                    await IsHideLoading();
+                    await IsVisibleElement(false, true);
                 }
             }
             catch
             {
                 await AlertService.Show(TextLocalize.UnknownError);
-                await IsHideLoading();
+                await IsVisibleElement(false, true);
             }
         }
 
         private void NavigateTo()
         {
+            // Этом моменте нужно было бы использовать сервис навигации для перехода на другую страницу
+            // Но в данном случае, я просто создаю новую страницу и устанавливаю ее в качестве главной
             var messagerPage = IPlatformApplication.Current.Services.GetService<MessengerPage>();
             Application.Current.MainPage = new NavigationPage(messagerPage);
         }
 
-        private Task IsVisibleLoading()
+        private Task IsVisibleElement(bool isLoadingEnable, bool isAuthEnable)
         {
-            IsLoadingEnabled = true;
-            IsAuthEnabled = false;
-
-            return Task.CompletedTask;
-        }
-
-        private Task IsHideLoading()
-        {
-            IsLoadingEnabled = false;
-            IsAuthEnabled = true;
+            IsLoadingEnabled = isLoadingEnable;
+            IsAuthEnabled = isAuthEnable;
 
             return Task.CompletedTask;
         }

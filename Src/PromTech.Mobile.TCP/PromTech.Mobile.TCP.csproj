@@ -17,8 +17,4 @@
 		<PackageReference Include="System.Text.Encoding.CodePages" Version="9.0.2" />
 	</ItemGroup>
 
-	<ItemGroup>
-	  <ProjectReference Include="..\PromTech.Mobile.Model\PromTech.Mobile.Model.csproj" />
-	</ItemGroup>
-
 </Project>
